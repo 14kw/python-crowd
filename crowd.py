@@ -31,11 +31,11 @@ class CrowdServer(object):
     The ``ssl_verify`` parameter controls how and if certificates are verified.
     If ``True``, the SSL certificate will be verified.
     A CA_BUNDLE path can also be provided.
-    
+
     The ``client_cert`` tuple (cert,key) specifies a SSL client certificate and key files.
     """
 
-    def __init__(self, crowd_url, app_name, app_pass, ssl_verify=True, 
+    def __init__(self, crowd_url, app_name, app_pass, ssl_verify=True,
                  timeout=None, client_cert=None):
         self.crowd_url = crowd_url
         self.app_name = app_name
@@ -549,6 +549,112 @@ class CrowdServer(object):
             return True
 
         return False
+
+    # WL added this
+    def add_group(self, groupname, raise_on_error=False, **kwargs):
+        """Add a group to the directory
+
+        Args:
+            groupname: The group name
+            raise_on_error: optional (default: False)
+            **kwargs: key-value pairs:
+                          description: optional
+                          active: optional (default True)
+
+        Returns:
+            True: Succeeded
+            False: If unsuccessful
+        """
+        # Populate data with default values.
+        data = {"name": groupname,
+                "type": "GROUP",
+                "description": "",
+                "active": True}
+
+        # Put values from kwargs into data
+        for k, v in kwargs.items():
+            new_k = k.replace("_", "-")
+            if new_k not in data:
+                raise ValueError("invalid argument %s" % k)
+            data[new_k] = v
+
+        response = self._post(self.rest_url + "/group", data=json.dumps(data))
+
+        if response.status_code == 201:
+            return True
+
+        if raise_on_error:
+            raise RuntimeError(response.json()['message'])
+
+        return False
+
+    # WL added this
+    def get_group(self, groupname):
+        """Retrieves details of the given groupname.
+
+        Args:
+            groupname: The group name.
+
+
+        Returns:
+            (description, active):
+                A tuple containing the group description and whether it's
+                active.
+        """
+
+        response = self._get(self.rest_url + "/group/",
+                             params={"groupname": groupname})
+
+        if not response.ok:
+            return None
+
+        json_ = response.json()
+        return (json_.get('description', ''), json_.get('active', True))
+
+    # WL added this
+    def get_direct_child_groups(self, groupname):
+        """Retrieves a list of group names that are direct children of <groupname>.
+
+        Args:
+            groupname: The group name.
+
+        Returns:
+            list:
+                A list of strings of group names.
+        """
+
+        response = self._get(self.rest_url + "/group/child-group/direct",
+                             params={"groupname": groupname,
+                                     "start-index": 0,
+                                     "max-results": 99999})
+
+        if not response.ok:
+            return None
+
+        return [g['name'] for g in response.json()['groups']]
+
+    # WL added this
+    def get_direct_child_users(self, groupname):
+        """Retrieves a list of user names that are direct children of
+        <groupname>.
+
+        Args:
+            groupname: The group name.
+
+        Returns:
+            list:
+                A list of strings of user names.
+        """
+
+        response = self._get(self.rest_url + "/group/user/direct",
+                             params={"groupname": groupname,
+                                     "start-index": 0,
+                                     "max-results": 99999})
+
+        if not response.ok:
+            return None
+
+        return [g['name'] for g in response.json()['users']]
 
     def get_groups(self, username):
         """Retrieves a list of group names that have <username> as a direct member.
