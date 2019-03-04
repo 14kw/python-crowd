@@ -483,9 +483,9 @@ class CrowdServer(object):
     def remove_user_from_group(self, username, groupname, raise_on_error=False):
         """Remove a user from a group
 
-	Attempts to remove a user from a group
+        Attempts to remove a user from a group
 
-	Args
+        Args
              username: The username to remove from the group.
              groupname: The group name to be removed from the user.
 
@@ -587,6 +587,24 @@ class CrowdServer(object):
             raise RuntimeError(response.json()['message'])
 
         return False
+    
+    # 14kw added this
+    def remove_group(self, groupname):
+        """Remove a group from the directory
+        
+        Ars:
+            groupname: The group name.
+        
+        Returns:
+            True: Succeeded
+            False: If unsuccessful
+        """
+        response = self._delete(self.rest_url + "/group", params={"groupname": groupname})
+
+        if not response.ok:
+            return None
+
+        return True
 
     # WL added this
     def get_group(self, groupname):
